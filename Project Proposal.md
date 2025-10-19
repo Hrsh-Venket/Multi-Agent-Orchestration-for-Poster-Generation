@@ -1,10 +1,10 @@
 # Project Proposal: Creative Poster Generator
 
 ## Group Member information
-VENKET, Hrsh (21247584, MAI)
+VENKET, Hrsh (21247584, ARIN)
 SHAO, Zixuan (21254032, > MAIE)
 LI, Ang (21273650, MAIE)
-TOLEGENULY, Ibragim (21247314, MAI)
+TOLEGENULY, Ibragim (21247314, ARIN)
 
 ## Project Background
 For this project, we will be orchestrating agents to do Poster Generator. Below are the input and output of our pipeline. We will use LangGraph to orchestrate a set of agents that will help construct the creative poster. Using different specialised agents for the different tasks can give better performance. Further, while our project will certainly meet the requirements given to us, we want to build a tool that can go beyond it. For a real user of a tool like this, AI may not be the best way to get their exact vision for a poster. Further, Generative AI models (despite many checks) are prone to errors and hallucinations. Thus, a far more useful tool would not only create a poster, but also give the user the constituent assets so they can adjust the poster according to what they want
@@ -19,7 +19,7 @@ For this project, we will be orchestrating agents to do Poster Generator. Below 
 
 - 720 x 1280 poster png image
 
-(we will try to implement these if we are abl eto build the original pipeline without issues)
+(we will try to implement these if we are able to build the original pipeline without issues)
 
 - Elements used in poster in a zip file
 - layout.json — list of elements with {type, x, y, w, h, z, constraints,textStyle}
@@ -62,9 +62,15 @@ Below are the list of agents we intend to use and some description and ideas reg
   - No text in the margins 
   - Heuristics to check readability (including contrast, number of colours in poster, etc)
   - Font consistency
-  - Use this aesthetic score predictor to check the appearance of the 
+  - Use this [aesthetics proxy](https://github.com/christophschuhmann/improved-aesthetic-predictor) to check the appearance of the poster and if it at least looks decent. We will test this out to see if it is acceptable 
 
 ## Project Timeline
 
+For this project, we will track our progress and contributions via Github. We will periodically assign issues to each teammate and mark them as resolved once the new feature is added to main.
+
+1. 1st November: Asset and image asset generating agent, brand grounding agent, Controllable layout generator, start learning LangGraph
+2. 8th November: Basic LangGraph structure, Planning and prompting agent, Editing agent
+3. 15th November Evaluation agent, and refining performance of the pipeline
+4. 22nd November: Final Report
 
 
