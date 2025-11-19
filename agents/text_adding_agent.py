@@ -75,7 +75,7 @@ Instructions:
             "image": input_image,
             "prompt": text_addition_prompt,
             "num_inference_steps": config.HUGGINGFACE_INFERENCE_STEPS,
-            "true_cfg_scale": 4.0,
+            "true_cfg_scale": 25.0,
             "negative_prompt": " ",
         }
 

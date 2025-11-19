@@ -16,7 +16,7 @@ OPENROUTER_MODEL = "openrouter/sherlock-dash-alpha"
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 HUGGINGFACE_MODEL = "Qwen/Qwen-Image-Edit"
-HUGGINGFACE_INFERENCE_STEPS = 4
+HUGGINGFACE_INFERENCE_STEPS = 50
 
 # Retry configurations
 MAX_TEXT_ATTEMPTS = 3

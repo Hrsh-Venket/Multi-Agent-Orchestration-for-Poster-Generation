@@ -92,8 +92,8 @@ def image_generation_agent(state: AgentState) -> AgentState:
             "image": input_image,
             "prompt": prompt,
             "num_inference_steps": config.HUGGINGFACE_INFERENCE_STEPS,
-            "true_cfg_scale": 4.0,
-            "negative_prompt": " ",
+            "true_cfg_scale": 15.0,
+            "negative_prompt": "text",
         }
 
         # Generate image using the pipeline with inference mode
