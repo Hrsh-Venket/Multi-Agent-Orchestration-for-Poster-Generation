@@ -78,6 +78,7 @@ Keep text concise and impactful. Follow any character limits specified in the pl
                     "content": text_prompt
                 }
             ],
+            enable_thinking=False,
         )
 
         generated_text = response.choices[0].message.content

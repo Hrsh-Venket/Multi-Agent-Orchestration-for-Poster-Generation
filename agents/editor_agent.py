@@ -87,7 +87,7 @@ Be thorough in your evaluation. The logo MUST be visibly integrated into the des
 
     try:
         response = client.chat.completions.create(
-            model=config.SiliconFlow_Model,
+            model=config.SiliconFlow_MODEL,
             messages=[
                 {
                     "role": "user",
