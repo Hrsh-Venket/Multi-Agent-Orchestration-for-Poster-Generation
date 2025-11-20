@@ -6,6 +6,7 @@ import base64
 from openai import OpenAI
 from state import AgentState
 import config
+import traceback
 
 
 def encode_image(image_path: str) -> str:
@@ -32,6 +33,14 @@ def editor_agent(state: AgentState) -> AgentState:
         Updated state with validation_feedback and validation_passed
     """
     print("\n=== STAGE 3: EDITOR AGENT (VALIDATION) ===")
+    config.log_stage("STAGE 3: EDITOR AGENT (VALIDATION)", "Starting image validation...")
+
+    attempt_num = state.get("image_attempt_count", 1)
+    complete_failure_count = state.get("image_complete_failure_count", 0)
+    print(f"Validating image attempt {attempt_num} (complete failure count: {complete_failure_count})")
+    config.log_message(f"Image attempt: {attempt_num}, Complete failure count: {complete_failure_count}")
+    config.log_message(f"Current image: {state['current_image']}")
+    config.log_message(f"Input image: {state['input_image_path']}")
 
     # Initialize OpenRouter client
     client = OpenAI(
@@ -42,6 +51,8 @@ def editor_agent(state: AgentState) -> AgentState:
     # Encode the current image and input logo
     current_image_base64 = encode_image(state["current_image"])
     input_logo_base64 = encode_image(state["input_image_path"])
+
+    config.log_message("\nImages encoded successfully")
 
     validation_prompt = f"""You are a professional design validator. Compare the generated poster image against the original logo and design plan.
 
@@ -67,37 +78,51 @@ TEXT_ON_IMAGE: [YES or NO]
 
 Be thorough in your evaluation. The logo MUST be visibly integrated into the design."""
 
-    response = client.chat.completions.create(
-        model=config.OPENROUTER_MODEL,
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": validation_prompt
-                    },
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/png;base64,{input_logo_base64}",
-                            "detail": "high"
-                        }
-                    },
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/png;base64,{current_image_base64}",
-                            "detail": "high"
-                        }
-                    }
-                ]
-            }
-        ],
-    )
+    config.log_message(f"\nValidation prompt sent to LLM:\n{validation_prompt}")
 
-    validation_result = response.choices[0].message.content
-    state["validation_feedback"] = validation_result
+    try:
+        response = client.chat.completions.create(
+            model=config.OPENROUTER_MODEL,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": validation_prompt
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/png;base64,{input_logo_base64}",
+                                "detail": "high"
+                            }
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/png;base64,{current_image_base64}",
+                                "detail": "high"
+                            }
+                        }
+                    ]
+                }
+            ],
+        )
+
+        validation_result = response.choices[0].message.content
+        config.log_message(f"\nLLM Response:\n{validation_result}")
+
+        state["validation_feedback"] = validation_result
+    except Exception as e:
+        error_msg = f"ERROR: {str(e)}"
+        print(error_msg)
+        config.log_message(f"\n{error_msg}")
+        config.log_message(f"Traceback:\n{traceback.format_exc()}")
+
+        # On error, set validation to failed
+        validation_result = f"VALIDATION: FAIL\nERROR: {str(e)}"
+        state["validation_feedback"] = validation_result
 
     # Check if validation passed
     validation_passed = "VALIDATION: PASS" in validation_result.upper()
@@ -109,34 +134,71 @@ Be thorough in your evaluation. The logo MUST be visibly integrated into the des
 
     print(f"Validation result: {'PASSED' if validation_passed else 'FAILED'}")
     print(f"Logo integrated: {'YES' if logo_integrated else 'NO'}")
+    print(f"Text on image: {'YES' if text_on_image else 'NO'}")
     print(f"Feedback: {validation_result[:300]}...")
+
+    config.log_message(f"\nValidation passed: {validation_passed}")
+    config.log_message(f"Logo integrated: {logo_integrated}")
+    config.log_message(f"Text on image: {text_on_image}")
 
     # Update best image if this one passed or is better
     if validation_passed or state.get("best_image") is None:
         state["best_image"] = state["current_image"]
+        config.log_message(f"Updated best_image to: {state['current_image']}")
 
-    # Add logo integration info to feedback
+    # Add structured failure reasons to feedback
     if not logo_integrated:
+        state["validation_feedback"] += "\n\nFAILURE_TYPE: logo_missing"
         state["validation_feedback"] += "\n\nIMPORTANT: Logo not properly integrated. Must revert to input.png as base."
+        config.log_message("\nFAILURE TYPE: logo_missing")
 
     if text_on_image:
+        state["validation_feedback"] += "\n\nFAILURE_TYPE: text_present"
         state["validation_feedback"] += "\n\nIMPORTANT: Text elements were found directly on the image, which is not allowed. Must revert to input.png as base."
+        config.log_message("\nFAILURE TYPE: text_present")
 
     return state
 
 
 def should_retry_image(state: AgentState) -> str:
     """
-    Decision function for image generation retry loop.
+    Decision function for image generation retry loop with extended retries for complete failures.
 
     Returns:
         "retry" if should retry image generation, "continue" otherwise
     """
+    attempt_count = state.get("image_attempt_count", 0)
+    complete_failure_count = state.get("image_complete_failure_count", 0)
+    validation_feedback = state.get("validation_feedback", "")
+
+    # Check for complete failure conditions (text present or logo missing)
+    is_complete_failure = ("text_present" in validation_feedback.lower() or
+                          "logo_missing" in validation_feedback.lower() or
+                          "logo not" in validation_feedback.lower())
+
+    # If validation passed, continue to next stage
     if state.get("validation_passed"):
+        print("\nValidation passed. Proceeding to next stage.")
+        config.log_message("\nDecision: Validation passed, proceeding to segmentation.")
         return "continue"
 
-    if state["image_attempt_count"] >= config.MAX_IMAGE_ATTEMPTS:
-        print(f"\nMax image attempts ({config.MAX_IMAGE_ATTEMPTS}) reached. Continuing with best attempt.")
-        return "continue"
+    # Regular retry loop (max 3 attempts)
+    if attempt_count < config.MAX_IMAGE_ATTEMPTS:
+        print(f"\nRetrying image generation (attempt {attempt_count + 1}/{config.MAX_IMAGE_ATTEMPTS})...")
+        config.log_message(f"\nDecision: Retrying image generation (attempt {attempt_count + 1}/{config.MAX_IMAGE_ATTEMPTS})")
+        return "retry"
 
-    return "retry"
+    # Extended retry for complete failures (max 15 more)
+    elif is_complete_failure and complete_failure_count < config.MAX_IMAGE_COMPLETE_FAILURE_ATTEMPTS:
+        state["image_complete_failure_count"] = complete_failure_count + 1
+        state["image_attempt_count"] = 0  # Reset regular attempt counter
+        print(f"\nComplete failure detected (text present or logo missing).")
+        print(f"Extended retry {state['image_complete_failure_count']}/{config.MAX_IMAGE_COMPLETE_FAILURE_ATTEMPTS}")
+        config.log_message(f"\nDecision: Complete failure detected, extended retry {state['image_complete_failure_count']}/{config.MAX_IMAGE_COMPLETE_FAILURE_ATTEMPTS}")
+        config.log_message("Resetting regular attempt counter to 0")
+        return "retry"
+    else:
+        print(f"\nMax attempts reached. Continuing with best attempt.")
+        config.log_message(f"\nDecision: Max attempts reached (regular: {attempt_count}, complete failure: {complete_failure_count})")
+        config.log_message("Continuing with best attempt")
+        return "continue"

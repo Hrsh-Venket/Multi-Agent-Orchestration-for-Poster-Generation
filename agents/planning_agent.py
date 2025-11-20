@@ -7,6 +7,7 @@ import base64
 from openai import OpenAI
 from state import AgentState
 import config
+import traceback
 
 
 def encode_image(image_path: str) -> str:
@@ -32,6 +33,11 @@ def planning_agent(state: AgentState) -> AgentState:
         Updated state with planning_output
     """
     print("\n=== STAGE 1: PLANNING AGENT ===")
+    config.log_stage("STAGE 1: PLANNING AGENT", "Starting planning phase...")
+
+    # Log inputs
+    config.log_message(f"Input text: {state['input_text']}")
+    config.log_message(f"Input image: {state['input_image_path']}")
 
     # Initialize OpenRouter client
     client = OpenAI(
@@ -39,8 +45,12 @@ def planning_agent(state: AgentState) -> AgentState:
         api_key=config.OPENROUTER_API_KEY,
     )
 
+    config.log_message(f"\nOpenRouter client initialized")
+    config.log_message(f"Model: {config.OPENROUTER_MODEL}")
+
     # Encode the input image
     image_base64 = encode_image(state["input_image_path"])
+    config.log_message(f"Image encoded successfully")
 
     # Create the planning prompt
     planning_prompt = f"""You are a professional poster design planner. Analyze the provided logo/mascot image and the following input text to create a comprehensive poster design plan.
@@ -68,35 +78,46 @@ Your task is to create a detailed design plan that includes:
    - Relates to the input text theme
    - Specifies the art style consistent with the logo
    - Describes how to integrate with the existing logo visually
-   - Avoids any suggestions of adding text to the image, and reminds the model to leave space for text placement as per the layout design and never add text.
+   - Avoids any suggestions of adding text to the image, and reminds the model to leave space for text placement as per the layout design and never add text.·
 
 Be specific and detailed. This plan will guide all subsequent stages of poster generation.
 
 Format your response with clear section headers: COLOR PALETTE, LAYOUT DESIGN, TEXT REQUIREMENTS, and IMAGE GENERATION PROMPT."""
 
-    # Call OpenRouter API
-    response = client.chat.completions.create(
-        model=config.OPENROUTER_MODEL,
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": planning_prompt
-                    },
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/png;base64,{image_base64}"
-                        }
-                    }
-                ]
-            }
-        ],
-    )
+    config.log_message(f"\nPrompt sent to LLM:\n{planning_prompt}")
 
-    planning_output = response.choices[0].message.content
+    try:
+        # Call OpenRouter API
+        response = client.chat.completions.create(
+            model=config.OPENROUTER_MODEL,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": planning_prompt
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/png;base64,{image_base64}"
+                            }
+                        }
+                    ]
+                }
+            ],
+        )
+
+        planning_output = response.choices[0].message.content
+        config.log_message(f"\nLLM Response:\n{planning_output}")
+
+    except Exception as e:
+        error_msg = f"ERROR: {str(e)}"
+        print(error_msg)
+        config.log_message(f"\n{error_msg}")
+        config.log_message(f"Traceback:\n{traceback.format_exc()}")
+        raise
 
     # Save planning output
     os.makedirs(config.INTERMEDIATE_DIR, exist_ok=True)
@@ -106,6 +127,7 @@ Format your response with clear section headers: COLOR PALETTE, LAYOUT DESIGN, T
 
     print(f"Planning output saved to: {planning_path}")
     print(f"\nPlanning Summary (first 500 chars):\n{planning_output[:500]}...")
+    config.log_message(f"\nPlanning output saved to: {planning_path}")
 
     # Update state
     state["planning_output"] = planning_output

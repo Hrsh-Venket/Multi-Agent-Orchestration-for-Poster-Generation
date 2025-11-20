@@ -29,13 +29,19 @@ class AgentState(TypedDict):
     current_image: Optional[str]  # Path to current image attempt
     image_attempt_count: int
     best_image: Optional[str]  # Path to best image so far
+    image_complete_failure_count: int  # Extended retry counter for complete failures
 
     # Stage 3: Editor Agent (validation feedback)
     validation_feedback: Optional[str]
     validation_passed: bool
 
-    # Stage 6: Text Adding Agent
+    # Stage 6: Text Adding Agent (with retry loop)
     poster_with_text: Optional[str]  # Path to poster with text added
+    text_adding_attempt_count: int
+
+    # Stage 6a: Text Validation Agent
+    text_validation_result: Optional[str]
+    text_validation_feedback: Optional[str]
 
     # Stage 7: Final outputs
     final_poster_path: Optional[str]
