@@ -107,6 +107,7 @@ Format your response with clear section headers: COLOR PALETTE, LAYOUT DESIGN, T
                     ]
                 }
             ],
+            temperature=0.3,
         )
 
         planning_output = response.choices[0].message.content
