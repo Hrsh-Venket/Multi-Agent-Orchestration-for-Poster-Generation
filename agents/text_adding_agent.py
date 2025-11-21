@@ -73,6 +73,8 @@ def text_adding_agent(state: AgentState) -> AgentState:
     # Create short prompt for text addition
     text_content = state.get("best_text") or state.get("generated_text")
 
+    config.log_message(f"\nOriginal text content:\n{text_content}")
+
     # Extract actual text values without labels
     text_parts = []
     for line in text_content.split('\n'):
@@ -88,9 +90,11 @@ def text_adding_agent(state: AgentState) -> AgentState:
 
     # Combine all text parts
     actual_text = ' '.join(text_parts)
+    config.log_message(f"\nExtracted actual text (labels removed): {actual_text}")
 
     # Build initial short prompt with actual text only
     text_addition_prompt = f"Add this text to the poster: {actual_text}"
+    config.log_message(f"\nInitial prompt constructed: {text_addition_prompt}")
 
     # Add specific fix instruction if appropriate
     if attempt_num > 1:
@@ -98,22 +102,26 @@ def text_adding_agent(state: AgentState) -> AgentState:
         text_is_clear = state.get("text_is_clear", False)
         specific_fix = state.get("specific_fix", "")
 
+        config.log_message(f"\nRetry logic - text_is_correct: {text_is_correct}, text_is_clear: {text_is_clear}")
+        config.log_message(f"Specific fix from validation: {specific_fix}")
+
         # Only add fix instruction for specific cases
         if text_is_correct and not text_is_clear:
             # Text is correct but blurry - add clarity fix
             text_addition_prompt = specific_fix
-            print("Adding clarity fix instruction")
-            config.log_message("Adding clarity fix instruction")
+            print("Replacing prompt with clarity fix instruction")
+            config.log_message("\nReplacing prompt with clarity fix instruction")
         elif text_is_clear and not text_is_correct:
             # Text is clear but incorrect - add change instruction
             text_addition_prompt = specific_fix
-            print("Adding text change instruction")
-            config.log_message("Adding text change instruction")
-        # Otherwise, use initial prompt (no feedback)
+            print("Replacing prompt with text change instruction")
+            config.log_message("\nReplacing prompt with text change instruction")
+        else:
+            config.log_message("\nKeeping initial prompt (no specific fix criteria met)")
 
-    print(f"Text addition prompt: {text_addition_prompt}")
+    print(f"\nText addition prompt: {text_addition_prompt}")
     config.log_message(f"\n{'='*60}")
-    config.log_message(f"PROMPT TO TEXT ADDING MODEL:")
+    config.log_message(f"FINAL PROMPT TO TEXT ADDING MODEL:")
     config.log_message(f"{'='*60}")
     config.log_message(f"{text_addition_prompt}")
     config.log_message(f"{'='*60}")

@@ -19,13 +19,13 @@ HUGGINGFACE_MODEL = "Qwen/Qwen-Image-Edit"
 HUGGINGFACE_INFERENCE_STEPS = 50
 
 # Retry configurations
-MAX_TEXT_ATTEMPTS = 3
+MAX_TEXT_ATTEMPTS = 100
 MAX_IMAGE_ATTEMPTS = 3
 MAX_IMAGE_COMPLETE_FAILURE_ATTEMPTS = 15  # Extended retries for complete failures
 MAX_TEXT_ADDING_ATTEMPTS = 10
 
 # LangGraph configuration
-RECURSION_LIMIT = 50  # Maximum number of graph iterations (increase if hitting recursion errors)
+RECURSION_LIMIT = 100  # Maximum number of graph iterations (increase if hitting recursion errors)
 
 # File paths
 OUTPUT_DIR = "outputs"
