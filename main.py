@@ -301,8 +301,11 @@ def main():
             "final_text_path": None,
         }
 
-        # Run the workflow
-        final_state = app.invoke(initial_state)
+        # Run the workflow with recursion limit configuration
+        final_state = app.invoke(
+            initial_state,
+            config={"recursion_limit": config.RECURSION_LIMIT}
+        )
 
         print("\n" + "="*60)
         print("WORKFLOW COMPLETED SUCCESSFULLY")
