@@ -4,7 +4,7 @@ Generates text based on planning instructions with retry loop.
 """
 import os
 from openai import OpenAI
-form zhipuai import ZhipuAI
+from zhipuai import ZhipuAI
 from state import AgentState
 import config
 import traceback
